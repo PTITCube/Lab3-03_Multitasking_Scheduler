@@ -1,5 +1,5 @@
-# Lab6-01_Multitasking_Scheduler
+# Lab3-03_Multitasking_Scheduler
 
 **Đa nhiệm RTOS**
 
-Bài thực hành thuộc Lab6 (Structure) trong hệ thống CubeSat-LMS.
+Bài thực hành thuộc Lab3 (C&DH) trong hệ thống CubeSat-LMS.
