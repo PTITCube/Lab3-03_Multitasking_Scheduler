@@ -1,20 +1,62 @@
-# Lab3-03_Multitasking_Scheduler
+# Lab 3-03: Bộ Lập Lịch Đa Nhiệm FreeRTOS (Multitasking Scheduler)
 
-**Đa nhiệm FreeRTOS & Cơ chế Khóa Bảo vệ Tài nguyên (Mutex)**
+> **Phân hệ:** C&DH (Command & Data Handling)  
+> **Thư viện yêu cầu:** `PTITCube Library v1.1.0`  
+> **Nền tảng:** PlatformIO / ESP32-WROOM-32 (OBC)
 
-Bài thực hành thuộc Phân hệ C&DH (Lab 3) trong hệ thống PTITCube.
+---
 
-## 1. Mục tiêu
-- Phân chia hệ thống C&DH thành các tác vụ (Task) chạy độc lập, đa chu kỳ trên 2 nhân vi xử lý (Core 0 và Core 1).
-- Áp dụng cơ chế khóa **Mutex** (`PTIT_BUS_SERIAL`) để ngăn ngừa xung đột dữ liệu (Race Condition) khi nhiều tác vụ cùng truy cập cổng Serial Monitor.
-- Sử dụng các ngoại vi từ Lab 1 (LED GPIO 2, Serial Monitor) kết hợp cấu trúc gói tin viễn trắc giả lập (Mock Telemetry), hoàn toàn độc lập với phần cứng của các bài lab sau.
+## 📖 1. Mục Tiêu & Mô Tả Bài Thực Hành
 
-## 2. Phần cứng sử dụng
-- **ESP32 NodeMCU OBC**
-- **Heartbeat LED:** Chân GPIO 2 tích hợp trên bo mạch.
-- **Giao tiếp:** Cổng USB UART / Serial Monitor (Baudrate: `115200`).
+Khởi tạo các tiến trình độc lập (Tasks) thực thi đồng thời trên hai lõi CPU của ESP32 với mức ưu tiên khác nhau dưới sự điều phối của FreeRTOS.
 
-## 3. Các tác vụ trong hệ thống
-1. `HeartbeatLED` (Chu kỳ 200ms, Core 1, Priority 2): Nhấp nháy LED trạng thái OBC.
-2. `TelemGen` (Chu kỳ 1000ms, Core 1, Priority 2): Tạo gói tin viễn trắc giả lập (Điện áp pin, nhiệt độ mạch, thời gian hoạt động) và in ra Serial có khóa Mutex.
-3. `SysDiag` (Chu kỳ 3000ms, Core 0, Priority 1): Thực hiện tác vụ tự chẩn đoán bộ nhớ Heap và CPU trên Core 0, in báo cáo nhiều dòng có bảo vệ Mutex.
+---
+
+## 🔌 2. Sơ Đồ Chân Phần Cứng (Hardware Pinout)
+
+| Phân hệ | Tiến trình | Mô tả |
+| :--- | :--- | :--- |
+| CPU Core 0 | Task_Telemetry | Đọc cảm biến định kỳ |
+| CPU Core 1 | Task_Storage | Ghi dữ liệu vào MicroSD |
+
+---
+
+## 🛠️ 3. Cấu Hình Phần Mềm & Thư Viện
+
+- **Thư viện cốt lõi:** Thư mục `lib/PTITCube` tích hợp sẵn bộ thư viện phiên bản mới nhất `v1.1.0` với các phân hệ phân lớp:
+  - `CDH`: Quản lý luồng xuất nhập dữ liệu `cdh` (Stream inheritance) và hệ thống tệp FAT32 trên thẻ nhớ MicroSD.
+  - `EPS`: Quản lý năng lượng, đọc IC MAX17048 qua I2C.
+  - `Sensor`: Đọc cụm cảm biến môi trường BMP280, cảm biến quán tính 6-DoF MPU6500, từ kế QMC5883L và định vị GNSS L76X.
+  - `COM`: Quản lý module vô tuyến LoRa Ebyte E32 qua giao tiếp UART2.
+- **Kênh giám sát Console:**
+  - **Công cụ:** `cdh (PTIT_CDH stream - 115200 baud)`
+  - **Tốc độ Baud:** `115200 bps`
+  - **Lưu ý chuẩn hóa:** Kể từ Lab 3, mọi luồng in debug console được chuẩn hóa qua đối tượng `cdh` (`PTIT_CDH cdh;`) kế thừa trực tiếp từ lớp `Stream`/`Print` của Arduino, thay thế hoàn toàn cho `Serial` thông thường.
+
+---
+
+## 🚀 4. Hướng Dẫn Biên Dịch & Nạp Firmware
+
+Sử dụng **PlatformIO CLI** hoặc giao diện **VSCode / PlatformIO IDE**:
+
+```bash
+# 1. Di chuyển vào thư mục dự án
+cd Lab3-03_Multitasking_Scheduler
+
+# 2. Biên dịch mã nguồn
+pio run
+
+# 3. Nạp firmware vào vi điều khiển vệ tinh
+pio run -t upload
+
+# 4. Mở cửa sổ giám sát Serial Monitor
+pio device monitor -b 115200
+```
+
+---
+
+## 📝 5. Lưu Ý Kỹ Thuật
+
+- Sử dụng xTaskCreatePinnedToCore() để phân bổ công việc đồng thời giữa 2 core.
+- Không chèn các lệnh in `println()` trang trí dư thừa làm nghẽn bộ đệm UART khi vệ tinh vận hành ở tần số cao.
+- Kiểm tra kết nối cáp USB-UART và nguồn pin trước khi thực hiện nạp code.

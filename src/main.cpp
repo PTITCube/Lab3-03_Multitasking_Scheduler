@@ -4,14 +4,17 @@
  * Mục tiêu:
  * - Sử dụng bộ lập lịch FreeRTOS (thông qua PTIT_Scheduler) để phân chia hệ thống
  *   thành các tác vụ (Tasks) chạy độc lập theo chu kỳ.
- * - Sử dụng khóa Mutex (PTIT_BUS_SERIAL) để bảo vệ tài nguyên dùng chung (cổng Serial),
+ * - Sử dụng khóa Mutex (PTIT_BUS_SERIAL) để bảo vệ tài nguyên dùng chung (cổng cdh),
  *   ngăn chặn hiện tượng xung đột dữ liệu (Race Condition) khi nhiều tác vụ cùng in log.
  * - Sử dụng ngoại vi từ Lab 1 (LED chân GPIO 2) và dữ liệu viễn trắc giả lập (Mock Telemetry).
  *   Tuyệt đối KHÔNG phụ thuộc vào cảm biến hay phần cứng của các bài lab sau.
  */
 
 #include <Arduino.h>
+
 #include <PTITCube.h>
+
+PTIT_CDH cdh;
 
 PTIT_Scheduler scheduler;
 
@@ -43,9 +46,9 @@ void telemetryGeneratorTask() {
     currentTelemetry.boardTemp = 25.0 + (float)(random(0, 60)) / 10.0;       // 25.0°C - 31.0°C
     currentTelemetry.uptimeSec = millis() / 1000;
 
-    // Sử dụng Mutex để xin quyền in ra Serial Monitor an toàn
+    // Sử dụng Mutex để xin quyền in ra cdh Monitor an toàn
     if (PTIT_Scheduler::lock(PTIT_BUS_SERIAL, 100)) {
-        Serial.printf("[HK-TELEM] Gói #%04u | Pin: %.2fV | Nhiệt độ C&DH: %.1fC | Uptime: %lus\n",
+        cdh.printf("[HK-TELEM] Gói #%04u | Pin: %.2fV | Nhiệt độ C&DH: %.1fC | Uptime: %lus\n",
                       currentTelemetry.packetId,
                       currentTelemetry.batteryVoltage,
                       currentTelemetry.boardTemp,
@@ -58,30 +61,26 @@ void telemetryGeneratorTask() {
 // Mô phỏng tác vụ nặng, in nhiều dòng log và giữ bus lâu hơn
 void systemDiagnosticTask() {
     if (PTIT_Scheduler::lock(PTIT_BUS_SERIAL, 200)) {
-        Serial.println("--------------------------------------------------");
-        Serial.println("[DIAGNOSTIC] >>> Bắt đầu tự kiểm tra trạng thái C&DH (Core 0) <<<");
+                cdh.println("[DIAGNOSTIC] >>> Bắt đầu tự kiểm tra trạng thái C&DH (Core 0) <<<");
         // Giả lập thời gian tính toán và kiểm tra bộ nhớ
         delay(200);
-        Serial.printf("[DIAGNOSTIC] Bộ nhớ Heap còn trống: %u bytes\n", ESP.getFreeHeap());
-        Serial.printf("[DIAGNOSTIC] Tần số CPU: %u MHz | Chip Model: %s\n", ESP.getCpuFreqMHz(), ESP.getChipModel());
-        Serial.println("[DIAGNOSTIC] >>> Hoàn thành kiểm tra - Trạng thái: BÌNH THƯỜNG <<<");
-        Serial.println("--------------------------------------------------");
-        PTIT_Scheduler::unlock(PTIT_BUS_SERIAL);
+        cdh.printf("[DIAGNOSTIC] Bộ nhớ Heap còn trống: %u bytes\n", ESP.getFreeHeap());
+        cdh.printf("[DIAGNOSTIC] Tần số CPU: %u MHz | Chip Model: %s\n", ESP.getCpuFreqMHz(), ESP.getChipModel());
+        cdh.println("[DIAGNOSTIC] >>> Hoàn thành kiểm tra - Trạng thái: BÌNH THƯỜNG <<<");
+                PTIT_Scheduler::unlock(PTIT_BUS_SERIAL);
     }
 }
 
 void setup() {
-    Serial.begin(115200);
-    while (!Serial) { delay(10); }
+    cdh.begin(115200);
+    while (!cdh) { delay(10); }
 
     // Khởi tạo chân LED trên bo mạch (GPIO 2 - Lab 1)
     pinMode(2, OUTPUT);
     digitalWrite(2, LOW);
 
-    Serial.println("\n==================================================");
-    Serial.println("   PTITCUBE - LAB 3: C&DH MULTITASKING SCHEDULER   ");
-    Serial.println("==================================================");
-    Serial.println("[INFO] Khởi động hệ thống đa nhiệm FreeRTOS với Mutex...");
+        cdh.println("   PTITCUBE - LAB 3: C&DH MULTITASKING SCHEDULER   ");
+        cdh.println("[INFO] Khởi động hệ thống đa nhiệm FreeRTOS với Mutex...");
 
     // Cấu hình các Task: (Tên, Hàm, Chu kỳ ms, Core, Độ ưu tiên)
     scheduler.addTask("HeartbeatLED", ledHeartbeatTask,        200,  1, 2);
