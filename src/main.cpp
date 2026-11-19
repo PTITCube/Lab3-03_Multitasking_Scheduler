@@ -30,7 +30,7 @@ void telemetryTask(void* pvParameters) {
                        id++, voltage, temp, millis() / 1000);
             scheduler.unlock(PTIT_BUS_SERIAL);
         }
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
 
