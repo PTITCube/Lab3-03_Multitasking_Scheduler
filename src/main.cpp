@@ -26,7 +26,7 @@ void telemetryGeneratorTask(void* pvParameters) {
         float mockTemp    = 24.5f + (float)random(-10, 30) / 10.0f;
 
         if (scheduler.lock(PTIT_BUS_SERIAL, 100)) {
-            cdh.printf("[TELEM] #%04u | V: %.2fV | T: %.1fC | Uptime: %lus\n",
+            cdh.printf("TELEM: #%04u | V: %.2fV | T: %.1fC | Uptime: %lus\n",
                        packetId++, mockVoltage, mockTemp, millis() / 1000);
             scheduler.unlock(PTIT_BUS_SERIAL);
         }
@@ -38,7 +38,7 @@ void telemetryGeneratorTask(void* pvParameters) {
 void systemDiagnosticTask(void* pvParameters) {
     for (;;) {
         if (scheduler.lock(PTIT_BUS_SERIAL, 100)) {
-            cdh.printf("[DIAG] Heap: %u bytes | CPU: %u MHz\n",
+            cdh.printf("DIAG: Heap: %u bytes | CPU: %u MHz\n",
                        ESP.getFreeHeap(), ESP.getCpuFreqMHz());
             scheduler.unlock(PTIT_BUS_SERIAL);
         }
