@@ -46,7 +46,7 @@ void diagnosticTask(void* pvParameters) {
 }
 
 void setup() {
-    cdh.begin(115200);
+    cdh.begin();
 
     scheduler.addTask("Heartbeat",  heartbeatTask,  500,  1, 1);
     scheduler.addTask("Telemetry",  telemetryTask,  1000, 1, 1);
